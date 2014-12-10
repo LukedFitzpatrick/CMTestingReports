@@ -4,9 +4,6 @@ import re
 import os
 import csv
 
-# identifiers of filetypes.
-WATIN, WEBDRIVER, NONBROWSER = 0, 1, 2
-
 def processFileTree(currentDir, fileLibrary):
     # recursively move through directory finding .cs files and processing them.
     # returns the full file library.
@@ -30,7 +27,7 @@ def findAttributes(fileName, directoryName):
 # look through file, identify tests, ignores, test type etc.
 # returns fileData list
     lines = splitFileIntoLines(fileName)
-    tests, fixtures, ignores, lineNumber, testType = 0, 0, 0, 0, NONBROWSER
+    tests, fixtures, ignores, lineNumber, testType = 0, 0, 0, 0, "nonbrowser"
     notImplemented, needsInvestigation = 0, 0
     for line in lines:
         #remove starting tabs, skip comments
@@ -74,31 +71,8 @@ def createCSVReport(fileLibrary, directory):
 #writes to the given directory
     path = directory + "\\testingreport.csv"
     with open(path, 'wb') as fp:
-        totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation = 0, 0, 0, 0, 0, 0
-
         a = csv.writer(fp, delimiter=',')
-        data = []
-        
-        data.append(["Suite Name", "Selenium Tests", "Watin Tests", "Neutral Tests", "Ignored Tests", "Not Implemented", "Needs Investigation", "Total Tests"])
-        for suite in getSuites():
-            selenium = suiteTestCount(fileLibrary, suite, WEBDRIVER)
-            totalSelenium += selenium
-            watin = suiteTestCount(fileLibrary, suite, WATIN)
-            totalWatin += watin
-            neutral = suiteTestCount(fileLibrary, suite, NONBROWSER)
-            totalNeutral += neutral
-            total = selenium + watin + neutral
-            ignores = countIgnoresBySuite(fileLibrary, suite)
-            totalIgnores += ignores
-            notImplemented = countNotImplementedBySuite(fileLibrary, suite)
-            totalNotImplemented += notImplemented
-            needsInvestigation = countNeedsInvestigationBySuite(fileLibrary, suite)
-            totalNeedsInvestigation += needsInvestigation
-            if total > 0:
-                data.append([suite, selenium, watin, neutral, ignores, notImplemented, needsInvestigation, total])
-
-        totalTotal = totalSelenium + totalWatin + totalNeutral
-        data.append(["Total", totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation, totalTotal])
+        data = createTestReport(fileLibrary)
         a.writerows(data)
         print "Report was generated in " + path
 

@@ -1,5 +1,4 @@
 # identifiers of filetypes.
-WATIN, WEBDRIVER, NONBROWSER = 0, 1, 2
 
 def getSuites():
     return ["Automation.Admin", "Automation.API", "Automation.APIWebhooks", "Automation.Autoresponders", "Automation.Browsers", "Automation.CampaignPayment",
@@ -34,6 +33,38 @@ def getSeleniumPhrases():
     return ["WebDriverTestContext"]
 
 
+def createTestReport(fileLibrary):
+    totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation = 0, 0, 0, 0, 0, 0
+    data = []
+    data.append(["Suite Name", "Selenium Tests", "Watin Tests", "Neutral Tests", "Ignored Tests", "Not Implemented", "Needs Investigation", "Total Tests"])
+    for suite in getSuites():
+        selenium = suiteTestCount(fileLibrary, suite, "selenium")
+        totalSelenium += selenium
+            
+        watin = suiteTestCount(fileLibrary, suite, "watin")
+        totalWatin += watin
+            
+        neutral = suiteTestCount(fileLibrary, suite, "nonbrowser")
+        totalNeutral += neutral
+                                 
+        ignores = countIgnoresBySuite(fileLibrary, suite)
+        totalIgnores += ignores
+           
+        notImplemented = countNotImplementedBySuite(fileLibrary, suite)
+        totalNotImplemented += notImplemented
+            
+        needsInvestigation = countNeedsInvestigationBySuite(fileLibrary, suite)
+        totalNeedsInvestigation += needsInvestigation
+            
+        total = selenium + watin + neutral
+        if total > 0:
+            data.append([suite, selenium, watin, neutral, ignores, notImplemented, needsInvestigation, total])
+
+    totalTotal = totalSelenium + totalWatin + totalNeutral
+    data.append(["Total", totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation, totalTotal])
+    return data
+    
+    
 def splitFileIntoLines(fileName):
 # splits a file into a list of its lines.
     f = open(fileName, 'r')
@@ -82,9 +113,9 @@ def findTestType(line):
 # look for Watin/Selenium phrases in a line
     testType = -1
     if containsPhrase(line, getSeleniumPhrases()):
-        testType = WEBDRIVER
+        testType = "selenium"
     if containsPhrase(line, getWatinPhrases()):
-        testType = WATIN
+        testType = "watin"
     return testType
 
 def isComment(line):
