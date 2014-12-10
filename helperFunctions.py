@@ -1,12 +1,11 @@
 # identifiers of filetypes.
 
-def getSuites():
-    return ["Automation.Admin", "Automation.API", "Automation.APIWebhooks", "Automation.Autoresponders", "Automation.Browsers", "Automation.CampaignPayment",
-          "Automation.Canvas", "Automation.Client", "Automation.Common", "Automation.CreateSend", "Automation.CreateSendExtra",
-          "Automation.CustomDomains", "Automation.Database", "Automation.DataTransferObject", "Automation.DynamicContent", "Automation.Enum", "Automation.Helpers",
-          "Automation.NUnitAddIns", "Automation.Observer", "Automation.PageData", "Automation.Reports", "Automation.Segments", "Automation.Smoke",
-          "Automation.Subscribers", "Automation.SupportAdmin", "Automation.SystemEmails", "Automation.TestContext", "Automation.TestData", "Automation.Triggered", "Automation.Verification",
-          "Tools"]
+def getSuites(fileLibrary):
+    suites = []
+    for file in fileLibrary:
+        if not file.suite in suites:
+            suites.append(file.suite)
+    return suites
 
 def getTestPhrases():
     return ["[Test]", "[Test ", "[Test,"]
@@ -37,26 +36,22 @@ def createTestReport(fileLibrary):
     totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation = 0, 0, 0, 0, 0, 0
     data = []
     data.append(["Suite Name", "Selenium Tests", "Watin Tests", "Neutral Tests", "Ignored Tests", "Not Implemented", "Needs Investigation", "Total Tests"])
-    for suite in getSuites():
+    for suite in getSuites(fileLibrary):
         selenium = suiteTestCount(fileLibrary, suite, "selenium")
-        totalSelenium += selenium
-            
         watin = suiteTestCount(fileLibrary, suite, "watin")
-        totalWatin += watin
-            
         neutral = suiteTestCount(fileLibrary, suite, "nonbrowser")
-        totalNeutral += neutral
-                                 
         ignores = countIgnoresBySuite(fileLibrary, suite)
-        totalIgnores += ignores
-           
         notImplemented = countNotImplementedBySuite(fileLibrary, suite)
-        totalNotImplemented += notImplemented
-            
         needsInvestigation = countNeedsInvestigationBySuite(fileLibrary, suite)
+
+        totalSelenium += selenium
+        totalWatin += watin
+        totalNeutral += neutral
+        totalIgnores += ignores
+        totalNotImplemented += notImplemented
         totalNeedsInvestigation += needsInvestigation
-            
         total = selenium + watin + neutral
+        
         if total > 0:
             data.append([suite, selenium, watin, neutral, ignores, notImplemented, needsInvestigation, total])
 

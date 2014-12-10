@@ -37,11 +37,8 @@ def findAttributes(fileName, directoryName):
             continue
         #check if there are signs of Watin/Selenium files
         attemptTestType = findTestType(line)
-        if(attemptTestType != -1):
-            testType = attemptTestType
-
-        if containsPhrase(line, getTestFixturePhrases()):
-            fixtures += 1
+        if(attemptTestType != -1): testType = attemptTestType
+        if containsPhrase(line, getTestFixturePhrases()): fixtures += 1
         #look for tests and ignores
         if containsPhrase(line, getTestPhrases()):
             skip = 1
@@ -81,7 +78,7 @@ print "Reading in test data...\n\n"
 fileLibrary = []
 
 path = splitFileIntoLines("SET_SOURCE_PATH_HERE.txt")[0]
-driveDirectory = splitFileIntoLines("SET_DRIVE_PATH_HERE.txt")[0]
+driveDirectory = splitFileIntoLines("SET_OUTPUT_PATH_HERE.txt")[0]
 
 fileLibrary = processFileTree(path, fileLibrary)
 createCSVReport(fileLibrary, driveDirectory)
