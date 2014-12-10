@@ -9,7 +9,6 @@ def processFileTree(currentDir, fileLibrary):
     # returns the full file library.
     currentDir = os.path.abspath(currentDir)
     filesInCurDir = os.listdir(currentDir)
-
     for file in filesInCurDir:
         curFile = os.path.join(currentDir, file)
         if os.path.isfile(curFile):
