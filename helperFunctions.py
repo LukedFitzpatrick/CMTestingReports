@@ -1,12 +1,6 @@
 # identifiers of filetypes.
 WATIN, WEBDRIVER, NONBROWSER = 0, 1, 2
 
-# index of each piece of data within the standard fileData format
-NAMEINDEX, FIXTURESINDEX, TESTSINDEX, TESTLISTINDEX, IGNORESINDEX, IGNORELISTINDEX, TESTTYPEINDEX = 0, 1, 2, 3, 4, 5, 6
-SUITEINDEX, INVESTIGATIONINDEX, INVESTIGATIONLISTINDEX, NOTIMPLEMENTEDINDEX, NOTIMPLEMENTEDLISTINDEX = 7, 8, 9, 10, 11
-
-
-
 def getSuites():
     return ["Automation.Admin", "Automation.API", "Automation.APIWebhooks", "Automation.Autoresponders", "Automation.Browsers", "Automation.CampaignPayment",
           "Automation.Canvas", "Automation.Client", "Automation.Common", "Automation.CreateSend", "Automation.CreateSendExtra",
@@ -51,18 +45,32 @@ def splitFileIntoLines(fileName):
 def suiteTestCount(fileLibrary, suite, testType):
     count = 0
     for file in fileLibrary:
-        if(file[SUITEINDEX] == suite):
-            if(file[TESTTYPEINDEX] == testType):
-                count += file[TESTSINDEX]
+        if(file.suite == suite):
+            if(file.testType == testType):
+                count += file.nTests
     return count
 
-def countBySuite(fileLibrary, suite, index):
+def countIgnoresBySuite(fileLibrary, suite):
     count = 0
     for file in fileLibrary:
-        if(file[SUITEINDEX] == suite):
-            count += file[index]
+        if(file.suite == suite):
+            count += file.nIgnores
+    return count
+	
+def countNotImplementedBySuite(fileLibrary, suite):
+    count = 0
+    for file in fileLibrary:
+        if(file.suite == suite):
+            count += file.nNotImplemented
     return count
 
+def countNeedsInvestigationBySuite(fileLibrary, suite):
+    count = 0
+    for file in fileLibrary:
+        if(file.suite == suite):
+            count += file.nNeedsInvestigation
+    return count
+	
 def determineSuite(filepath):
     parts = filepath.split("\\")
     for directory in parts:

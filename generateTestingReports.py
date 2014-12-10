@@ -1,11 +1,8 @@
 from helperFunctions import *
+from fileData import *
 import re
 import os
 import csv
-
-# index of each piece of data within the standard fileData format
-NAMEINDEX, FIXTURESINDEX, TESTSINDEX, TESTLISTINDEX, IGNORESINDEX, IGNORELISTINDEX, TESTTYPEINDEX = 0, 1, 2, 3, 4, 5, 6
-SUITEINDEX, INVESTIGATIONINDEX, INVESTIGATIONLISTINDEX, NOTIMPLEMENTEDINDEX, NOTIMPLEMENTEDLISTINDEX = 7, 8, 9, 10, 11
 
 # identifiers of filetypes.
 WATIN, WEBDRIVER, NONBROWSER = 0, 1, 2
@@ -23,8 +20,8 @@ def processFileTree(currentDir, fileLibrary):
 
             if curFileExtension in ['cs']:
                 fileData = findAttributes(curFile, currentDir)
-                if(fileData[FIXTURESINDEX] > 0):
-                   fileLibrary.append(fileData)
+                if(fileData.nTests > 0):
+                    fileLibrary.append(fileData)
         else:
             processFileTree(curFile, fileLibrary)
     return fileLibrary
@@ -33,8 +30,8 @@ def findAttributes(fileName, directoryName):
 # look through file, identify tests, ignores, test type etc.
 # returns fileData list
     lines = splitFileIntoLines(fileName)
-    testNames, ignoreNames, tests, fixtures, ignores, lineNumber, testType = [], [], 0, 0, 0, 0, NONBROWSER
-    notImplemented, needsInvestigation, notImplementedList, needsInvestigationList = 0, 0, [], []
+    tests, fixtures, ignores, lineNumber, testType = 0, 0, 0, 0, NONBROWSER
+    notImplemented, needsInvestigation = 0, 0
     for line in lines:
         #remove starting tabs, skip comments
         line = removeTabs(line)
@@ -54,28 +51,24 @@ def findAttributes(fileName, directoryName):
             while not (re.search('[a-zA-Z]', lines[lineNumber+skip])):
                 skip += 1
             
-            testNames.append(getFunctionNameFromLine(lines[lineNumber+skip])) 
             #add a test unless it's part of a TestCase structure
             if not (containsPhrase(lines[lineNumber-1], getTestCasePhrases())):
                 tests += 1
 
             if containsPhrase(line, getIgnorePhrases()):
-                ignoreNames.append(getFunctionNameFromLine(lines[lineNumber+skip]))
                 ignores += 1
                 if(containsPhrase(line, getNotImplementedPhrases())):
                     notImplemented += 1
-                    notImplementedList.append(getFunctionNameFromLine(lines[lineNumber+skip]))
                 if(containsPhrase(line, getNeedsInvestigationPhrases())):
                     needsInvestigation += 1
-                    needsInvestigationList.append(getFunctionNameFromLine(lines[lineNumber+skip]))
                     
         if containsPhrase(line, getTestCasePhrases()):
             tests += 1
 
         lineNumber += 1
-    return [shortenFilename(fileName), fixtures, tests, testNames, ignores, ignoreNames, testType, determineSuite(directoryName),
-            needsInvestigation, needsInvestigationList, notImplemented, notImplementedList]
-
+	
+    fileObject = FileData(shortenFilename(fileName), determineSuite(directoryName), testType, tests, ignores, needsInvestigation, notImplemented)
+    return fileObject
 
 def createCSVReport(fileLibrary, directory):
 #writes to the given directory
@@ -95,11 +88,11 @@ def createCSVReport(fileLibrary, directory):
             neutral = suiteTestCount(fileLibrary, suite, NONBROWSER)
             totalNeutral += neutral
             total = selenium + watin + neutral
-            ignores = countBySuite(fileLibrary, suite, IGNORESINDEX)
+            ignores = countIgnoresBySuite(fileLibrary, suite)
             totalIgnores += ignores
-            notImplemented = countBySuite(fileLibrary, suite, NOTIMPLEMENTEDINDEX)
+            notImplemented = countNotImplementedBySuite(fileLibrary, suite)
             totalNotImplemented += notImplemented
-            needsInvestigation = countBySuite(fileLibrary, suite, INVESTIGATIONINDEX)
+            needsInvestigation = countNeedsInvestigationBySuite(fileLibrary, suite)
             totalNeedsInvestigation += needsInvestigation
             if total > 0:
                 data.append([suite, selenium, watin, neutral, ignores, notImplemented, needsInvestigation, total])
@@ -110,6 +103,7 @@ def createCSVReport(fileLibrary, directory):
         print "Report was generated in " + path
 
 print "Reading in test data...\n\n"
+
 fileLibrary = []
 
 path = splitFileIntoLines("SET_SOURCE_PATH_HERE.txt")[0]
