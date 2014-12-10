@@ -59,14 +59,18 @@ def createTestReport(fileLibrary):
     data.append(["Total", totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation, totalTotal])
     return data
     
-    
 def splitFileIntoLines(fileName):
 # splits a file into a list of its lines.
-    f = open(fileName, 'r')
-    lines = []
-    for line in f:
-        lines.append(line)
-    return lines
+    try:
+        f = open(fileName, 'r')
+        lines = []
+        for line in f:
+            lines.append(line)
+        return lines
+    except IOError:
+        print "Couldn't open " + fileName
+        x = raw_input("")
+    
 
 def suiteTestCount(fileLibrary, suite, testType):
     count = 0

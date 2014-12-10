@@ -7,20 +7,23 @@ import csv
 def processFileTree(currentDir, fileLibrary):
     # recursively move through directory finding .cs files and processing them.
     # returns the full file library.
-    currentDir = os.path.abspath(currentDir)
-    filesInCurDir = os.listdir(currentDir)
-    for file in filesInCurDir:
-        curFile = os.path.join(currentDir, file)
-        if os.path.isfile(curFile):
-            curFileExtension = curFile[-2:]
+    try:
+        currentDir = os.path.abspath(currentDir)
+        filesInCurDir = os.listdir(currentDir)
+        for file in filesInCurDir:
+            curFile = os.path.join(currentDir, file)
+            if os.path.isfile(curFile):
+                curFileExtension = curFile[-2:]
 
-            if curFileExtension in ['cs']:
-                fileData = findAttributes(curFile, currentDir)
-                if(fileData.nTests > 0):
-                    fileLibrary.append(fileData)
-        else:
-            processFileTree(curFile, fileLibrary)
-    return fileLibrary
+                if curFileExtension in ['cs']:
+                    fileData = findAttributes(curFile, currentDir)
+                    if(fileData.nTests > 0):
+                        fileLibrary.append(fileData)
+            else:
+                processFileTree(curFile, fileLibrary)
+        return fileLibrary
+    except:
+        print "You didn't provide a good source/destination path"
 
 def findAttributes(fileName, directoryName):
 # look through file, identify tests, ignores, test type etc.
@@ -75,9 +78,14 @@ def createCSVReport(fileLibrary, directory):
 print "Reading in test data...\n\n"
 
 fileLibrary = []
+try:
+    path = splitFileIntoLines("SET_SOURCE_PATH_HERE.txt")[0]
+    driveDirectory = splitFileIntoLines("SET_OUTPUT_PATH_HERE.txt")[0]
+except IndexError:
+    print "You didn't provide a source/destination directory!"
+    x = raw_input("Press enter")
 
-path = splitFileIntoLines("SET_SOURCE_PATH_HERE.txt")[0]
-driveDirectory = splitFileIntoLines("SET_OUTPUT_PATH_HERE.txt")[0]
 
 fileLibrary = processFileTree(path, fileLibrary)
 createCSVReport(fileLibrary, driveDirectory)
+x = raw_input("Press enter")
