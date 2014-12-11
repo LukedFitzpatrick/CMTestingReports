@@ -32,7 +32,7 @@ class TestHelperFunctions(unittest.TestCase):
     def test_countData(self):
         lines = ["[TestCase Red]", "[TestCase Blue]", "[Test Ignore(\"NotImplemented\")]", "[Test]", "[Test Ignore(\"NeedsInvestigation\")]"]
         file1 = FileData("name", "Automation.suite", "selenium", 4, 2, 1, 1)
-        actual = countData(lines, "name", "Automation.suite")
+        actual = countData(lines, "Automation.suite\\name")
         self.assertEqual(actual.name, file1.name)
         self.assertEqual(actual.suite, file1.suite)
         self.assertEqual(actual.nTests, file1.nTests)
@@ -41,7 +41,18 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertEqual(actual.nNeedsInvestigation, file1.nNeedsInvestigation)
 
     def test_findAttributes(self):
-        
-        
+        actual = findAttributes("C:\\Projects\\automation\\src\\Automation.Smoke\\SmokeTests.cs")
+        self.assertEqual(actual.name, "SmokeTests.cs")
+        self.assertEqual(actual.suite, "Automation.Smoke")
+        self.assertEqual(actual.testType, "selenium")
+        self.assertEqual(actual.nTests, 16)
+        self.assertEqual(actual.nIgnores, 1)
+        self.assertEqual(actual.nNeedsInvestigation, 0)
+        self.assertEqual(actual.nNotImplemented, 0)
+    
+    def test_addPossibleOccurence(self):
+        self.assertEqual(addPossibleOccurence("shortlonglong", lambda: ["short"]), 1)
+        self.assertEqual(addPossibleOccurence("longlonglong", lambda: ["short"]), 0)
+
 if __name__ == '__main__':
     unittest.main()

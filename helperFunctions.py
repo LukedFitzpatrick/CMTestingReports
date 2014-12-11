@@ -38,7 +38,7 @@ def processFileTree(currentDir, fileLibrary):
         if os.path.isfile(curFile):
             curFileExtension = curFile[-2:]
             if curFileExtension in ['cs']:
-                fileData = findAttributes(curFile, currentDir)
+                fileData = findAttributes(curFile)
                 if(fileData.nTests > 0):
                     fileLibrary.append(fileData)
         else:
@@ -57,9 +57,9 @@ def determineTestType(lines):
     return testType
 
 # count the number of tests, ignores and specific ignores in a list of lines, returns a fileData object
-def countData(lines, fileName, directoryName):
+def countData(lines, filePath):
     lineNumber = 0
-    fileObject = FileData(shortenFilename(fileName), determineSuite(directoryName), "nonbrowser")
+    fileObject = FileData(shortenFilename(filePath), determineSuite(filePath), "nonbrowser")
     fileObject.testType = determineTestType(lines)
     
     for line in lines:
@@ -77,11 +77,12 @@ def countData(lines, fileName, directoryName):
     return fileObject
 
 # takes a fileName and directoryName and returns a fileData object of the file.
-def findAttributes(fileName, directoryName):
-    lines = splitFileIntoLines(fileName)
-    return countData(lines, fileName, directoryName)
+def findAttributes(fullPath):
+    lines = splitFileIntoLines(fullPath)
+    return countData(lines, fullPath)
 
 # gets a ready made test report and output it as a .csv
+# NOTTESTED
 def createCSVReport(fileLibrary, directory):
     path = directory + "\\testingreport.csv"
     with open(path, 'wb') as fp:
@@ -90,16 +91,16 @@ def createCSVReport(fileLibrary, directory):
         a.writerows(data)
         print "Report was generated in " + path
     
-
-    
-
-    
+# returns 1 if any phrase in phrases occurs in line, otherwise returns 0
+# note that phrases is a function, to just pass in a string, use lambda: "string"
 def addPossibleOccurence(line, phrases):
     if containsPhrase(line, phrases()):
         return 1
     else:
         return 0
-    
+
+# creates and returns a list of lists of a test report.
+# NOTTESTED
 def createTestReport(fileLibrary):
     totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation = 0, 0, 0, 0, 0, 0
     data = []
