@@ -3,6 +3,17 @@ import re
 import os
 import csv
 
+class FileAttribute:
+    nTests = 0
+    nIgnores = 1
+    nNeedsInvestigation = 2
+    nNotImplemented = 3
+
+class TestType:
+    selenium = 0
+    watin = 1
+    nonbrowser = 2
+
 # Phrases to look for in each .cs file
 def getTestPhrases():
     return ["[Test]", "[Test ", "[Test,"]
@@ -47,7 +58,7 @@ def processFileTree(currentDir, fileLibrary):
 
 # finds whether a file is a "selenium", "watin" or "nonbrowser" test, returns a string with the test type
 def determineTestType(lines):
-    testType = "nonbrowser"
+    testType = TestType.nonbrowser
     for line in lines:
         line = removeTabs(line)
         if not isComment(line):
@@ -59,7 +70,7 @@ def determineTestType(lines):
 # count the number of tests, ignores and specific ignores in a list of lines, returns a fileData object
 def countData(lines, filePath):
     lineNumber = 0
-    fileObject = FileData(shortenFilename(filePath), determineSuite(filePath), "nonbrowser")
+    fileObject = FileData(shortenFilename(filePath), determineSuite(filePath), TestType.nonbrowser)
     fileObject.testType = determineTestType(lines)
     
     for line in lines:
@@ -82,7 +93,6 @@ def findAttributes(fullPath):
     return countData(lines, fullPath)
 
 # gets a ready made test report and output it as a .csv
-# NOTTESTED
 def createCSVReport(fileLibrary, directory):
     path = directory + "\\testingreport.csv"
     with open(path, 'wb') as fp:
@@ -100,19 +110,17 @@ def addPossibleOccurence(line, phrases):
         return 0
 
 # creates and returns a list of lists of a test report.
-# NOTTESTED
 def createTestReport(fileLibrary):
     totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation = 0, 0, 0, 0, 0, 0
     data = []
     data.append(["Suite Name", "Selenium Tests", "Watin Tests", "Neutral Tests", "Ignored Tests", "Not Implemented", "Needs Investigation", "Total Tests"])
     for suite in getSuites(fileLibrary):
-
-        selenium = suiteTestCount(fileLibrary, suite, "selenium")
-        watin = suiteTestCount(fileLibrary, suite, "watin")
-        neutral = suiteTestCount(fileLibrary, suite, "nonbrowser")     
-        ignores = countIgnoresBySuite(fileLibrary, suite)
-        notImplemented = countNotImplementedBySuite(fileLibrary, suite)
-        needsInvestigation = countNeedsInvestigationBySuite(fileLibrary, suite)
+        selenium = countBySuite(fileLibrary, suite, FileAttribute.nTests, TestType.selenium)
+        watin = countBySuite(fileLibrary, suite, FileAttribute.nTests, TestType.watin)
+        neutral = countBySuite(fileLibrary, suite, FileAttribute.nTests, TestType.nonbrowser)       
+        ignores = countBySuite(fileLibrary, suite, FileAttribute.nIgnores)
+        notImplemented = countBySuite(fileLibrary, suite, FileAttribute.nNotImplemented)
+        needsInvestigation = countBySuite(fileLibrary, suite, FileAttribute.nNeedsInvestigation)
 
         totalSelenium += selenium
         totalWatin += watin
@@ -128,9 +136,9 @@ def createTestReport(fileLibrary):
     totalTotal = totalSelenium + totalWatin + totalNeutral
     data.append(["Total", totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation, totalTotal])
     return data
-    
-def splitFileIntoLines(fileName):
+
 # splits a file into a list of its lines.
+def splitFileIntoLines(fileName):
     try:
         f = open(fileName, 'r')
         lines = []
@@ -140,42 +148,25 @@ def splitFileIntoLines(fileName):
     except IOError:
         print "Couldn't open " + fileName
         x = raw_input("")
-    
-def suiteTestCount(fileLibrary, suite, testType):
+
+# counts the given property by suite
+def countBySuite(fileLibrary, suite, attribute, testType = ""):
     count = 0
     for file in fileLibrary:
         if(file.suite == suite):
-            if(file.testType == testType):
-                count += file.nTests
+            if(attribute == FileAttribute.nTests):
+                count += file.typeTests(testType)
+            elif(attribute == FileAttribute.nIgnores):
+                count += file.nIgnores
+            elif(attribute == FileAttribute.nNeedsInvestigation):
+                count += file.nNeedsInvestigation
+            elif(attribute == FileAttribute.nNotImplemented):
+                count += file.nNotImplemented
+            else:
+                return 0
     return count
 
-def countIgnoresBySuite(fileLibrary, suite):
-    count = 0
-    for file in fileLibrary:
-        if(file.suite == suite):
-            count += file.nIgnores
-    return count
-	
-def countNotImplementedBySuite(fileLibrary, suite):
-    count = 0
-    for file in fileLibrary:
-        if(file.suite == suite):
-            count += file.nNotImplemented
-    return count
-
-def countNeedsInvestigationBySuite(fileLibrary, suite):
-    count = 0
-    for file in fileLibrary:
-        if(file.suite == suite):
-            count += file.nNeedsInvestigation
-    return count
-    
-def countAttributeBySuite(fileLibrary, suite, attribute):
-    count = 0
-    for file in fileLibrary:
-        if(file.suite == suite):
-            count += file.attribute
-            
+# given the full path, determines what suite the file is in    
 def determineSuite(filepath):
     parts = filepath.split("\\")
     for directory in parts:
@@ -183,25 +174,33 @@ def determineSuite(filepath):
             return directory
     return "Unknown"
 
+# look for the indicators of a selenium/watin file in a particular line.
 def findTestType(line):
 # look for Watin/Selenium phrases in a line
-    testType = -1
-    if containsPhrase(line, getSeleniumPhrases()):
-        testType = "selenium"
-    if containsPhrase(line, getWatinPhrases()):
-        testType = "watin"
-    return testType
+    if (not isComment(line)):
+        testType = -1
+        if containsPhrase(line, getSeleniumPhrases()):
+            testType = TestType.selenium
+        if containsPhrase(line, getWatinPhrases()):
+            testType = TestType.watin
+        return testType
+    else:
+        return -1
 
+# returns true if the line is a comment
 def isComment(line):
-    return (line[:2] == "//")
+    return (removeTabs(line)[:2] == "//")
 
+# particularly concerned with removing leading tabs and spaces
 def removeTabs(line):
     return line.strip(' \t\n\r')
 
+# given the full path, returns just the file name
 def shortenFilename(fileName):
     fileName = fileName.split("\\")
     return fileName[len(fileName)-1]
 
+# if any of phrases is in line, returns true, otherwise returns false.
 def containsPhrase(line, phrases):
     for phrase in phrases:
         if phrase in line:
