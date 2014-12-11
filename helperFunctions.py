@@ -1,4 +1,64 @@
-# identifiers of filetypes.
+from fileData import *
+import re
+import os
+import csv
+
+
+def processFileTree(currentDir, fileLibrary):
+    # recursively move through directory finding .cs files and processing them.
+    # returns the full file library.
+    currentDir = os.path.abspath(currentDir)
+    filesInCurDir = os.listdir(currentDir)
+    for file in filesInCurDir:
+        curFile = os.path.join(currentDir, file)
+        if os.path.isfile(curFile):
+            curFileExtension = curFile[-2:]
+            if curFileExtension in ['cs']:
+                fileData = findAttributes(curFile, currentDir)
+                if(fileData.nTests > 0):
+                    fileLibrary.append(fileData)
+        else:
+            processFileTree(curFile, fileLibrary)
+    return fileLibrary
+     
+def countData(lines, fileName, directoryName):
+    lineNumber = 0
+    fileObject = FileData(shortenFilename(fileName), determineSuite(directoryName), "nonbrowser")
+    
+    for line in lines:
+        line = removeTabs(line)
+        if not isComment(line):
+            attemptTestType = findTestType(line)
+
+            if(attemptTestType != -1):
+                fileObject.testType = attemptTestType
+
+            if countOccurences(lines[lineNumber-1], getTestCasePhrases) == 0:
+                fileObject.nTests += countOccurences(line, getTestPhrases)
+
+            fileObject.nIgnores += countOccurences(line, getIgnorePhrases)
+            fileObject.nNotImplemented += countOccurences(line, getNotImplementedPhrases)
+            fileObject.nNeedsInvestigation += countOccurences(line, getNeedsInvestigationPhrases)
+            fileObject.nTests += countOccurences(line, getTestCasePhrases)
+
+        lineNumber += 1
+    return fileObject
+
+    
+def findAttributes(fileName, directoryName):
+    lines = splitFileIntoLines(fileName)
+    return countData(lines, fileName, directoryName)
+
+
+def createCSVReport(fileLibrary, directory):
+#writes to the given directory
+    path = directory + "\\testingreport.csv"
+    with open(path, 'wb') as fp:
+        a = csv.writer(fp, delimiter=',')
+        data = createTestReport(fileLibrary)
+        a.writerows(data)
+        print "Report was generated in " + path
+
 
 def getSuites(fileLibrary):
     suites = []
@@ -32,11 +92,18 @@ def getSeleniumPhrases():
     return ["WebDriverTestContext"]
 
 
+def countOccurences(line, phrases):
+    if containsPhrase(line, phrases()):
+        return 1
+    else:
+        return 0
+    
 def createTestReport(fileLibrary):
     totalSelenium, totalWatin, totalNeutral, totalIgnores, totalNotImplemented, totalNeedsInvestigation = 0, 0, 0, 0, 0, 0
     data = []
     data.append(["Suite Name", "Selenium Tests", "Watin Tests", "Neutral Tests", "Ignored Tests", "Not Implemented", "Needs Investigation", "Total Tests"])
     for suite in getSuites(fileLibrary):
+        
         selenium = suiteTestCount(fileLibrary, suite, "selenium")
         watin = suiteTestCount(fileLibrary, suite, "watin")
         neutral = suiteTestCount(fileLibrary, suite, "nonbrowser")
@@ -119,11 +186,6 @@ def findTestType(line):
 
 def isComment(line):
     return (line[:2] == "//")
-
-def getFunctionNameFromLine(line):
-    line = line.strip(' \t\n\r')
-    line = line.split(" ")
-    return line[len(line) - 1]
 
 def removeTabs(line):
     return line.strip(' \t\n\r')
