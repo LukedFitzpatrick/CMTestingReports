@@ -3,10 +3,34 @@ import re
 import os
 import csv
 
+# Phrases to look for in each .cs file
+def getTestPhrases():
+    return ["[Test]", "[Test ", "[Test,"]
+def getTestFixturePhrases():
+    return ["[TestFixture"]
+def getTestCasePhrases():
+    return ["[TestCase"]
+def getIgnorePhrases():
+    return ["Ignore(", "(Ignore", "Ignore]"]
+def getNotImplementedPhrases():
+    return ["NotImplemented"]
+def getNeedsInvestigationPhrases():
+    return ["NeedsInvestigation"]
+def getWatinPhrases():
+    return ["WebBrowserController", "WatinTestContext", "\"WatinTest"]
+def getSeleniumPhrases():
+    return ["WebDriverTestContext"]
 
+# searches through the fileLibrary and creates an array of the encountered suites.
+def getSuites(fileLibrary):
+    suites = []
+    for file in fileLibrary:
+        if not file.suite in suites:
+            suites.append(file.suite)
+    return suites
+
+# recursively move through directory finding .cs files and processing them, returns a file library
 def processFileTree(currentDir, fileLibrary):
-    # recursively move through directory finding .cs files and processing them.
-    # returns the full file library.
     currentDir = os.path.abspath(currentDir)
     filesInCurDir = os.listdir(currentDir)
     for file in filesInCurDir:
@@ -20,79 +44,57 @@ def processFileTree(currentDir, fileLibrary):
         else:
             processFileTree(curFile, fileLibrary)
     return fileLibrary
-     
-def countData(lines, fileName, directoryName):
-    lineNumber = 0
-    fileObject = FileData(shortenFilename(fileName), determineSuite(directoryName), "nonbrowser")
-    
+
+# finds whether a file is a "selenium", "watin" or "nonbrowser" test, returns a string with the test type
+def determineTestType(lines):
+    testType = "nonbrowser"
     for line in lines:
         line = removeTabs(line)
         if not isComment(line):
             attemptTestType = findTestType(line)
-
             if(attemptTestType != -1):
-                fileObject.testType = attemptTestType
+                testType = attemptTestType
+    return testType
 
-            if countOccurences(lines[lineNumber-1], getTestCasePhrases) == 0:
-                fileObject.nTests += countOccurences(line, getTestPhrases)
-
-            fileObject.nIgnores += countOccurences(line, getIgnorePhrases)
-            fileObject.nNotImplemented += countOccurences(line, getNotImplementedPhrases)
-            fileObject.nNeedsInvestigation += countOccurences(line, getNeedsInvestigationPhrases)
-            fileObject.nTests += countOccurences(line, getTestCasePhrases)
-
+# count the number of tests, ignores and specific ignores in a list of lines, returns a fileData object
+def countData(lines, fileName, directoryName):
+    lineNumber = 0
+    fileObject = FileData(shortenFilename(fileName), determineSuite(directoryName), "nonbrowser")
+    fileObject.testType = determineTestType(lines)
+    
+    for line in lines:
+        line = removeTabs(line)
+        if not isComment(line):
+            #if there's not a test case in the few lines above, add a test if it's there
+            if addPossibleOccurence(lines[lineNumber-1], getTestCasePhrases) == 0:
+                fileObject.nTests += addPossibleOccurence(line, getTestPhrases)
+            
+            fileObject.nIgnores += addPossibleOccurence(line, getIgnorePhrases)
+            fileObject.nNotImplemented += addPossibleOccurence(line, getNotImplementedPhrases)
+            fileObject.nNeedsInvestigation += addPossibleOccurence(line, getNeedsInvestigationPhrases)
+            fileObject.nTests += addPossibleOccurence(line, getTestCasePhrases)
         lineNumber += 1
     return fileObject
 
-    
+# takes a fileName and directoryName and returns a fileData object of the file.
 def findAttributes(fileName, directoryName):
     lines = splitFileIntoLines(fileName)
     return countData(lines, fileName, directoryName)
 
-
+# gets a ready made test report and output it as a .csv
 def createCSVReport(fileLibrary, directory):
-#writes to the given directory
     path = directory + "\\testingreport.csv"
     with open(path, 'wb') as fp:
         a = csv.writer(fp, delimiter=',')
         data = createTestReport(fileLibrary)
         a.writerows(data)
         print "Report was generated in " + path
+    
 
+    
 
-def getSuites(fileLibrary):
-    suites = []
-    for file in fileLibrary:
-        if not file.suite in suites:
-            suites.append(file.suite)
-    return suites
-
-def getTestPhrases():
-    return ["[Test]", "[Test ", "[Test,"]
-
-def getTestFixturePhrases():
-    return ["[TestFixture"]
-
-def getTestCasePhrases():
-    return ["[TestCase"]
-
-def getIgnorePhrases():
-    return ["Ignore(", "(Ignore", "Ignore]"]
-
-def getNotImplementedPhrases():
-    return ["NotImplemented"]
-
-def getNeedsInvestigationPhrases():
-    return ["NeedsInvestigation"]
-
-def getWatinPhrases():
-    return ["WebBrowserController", "WatinTestContext", "\"WatinTest"]
-
-def getSeleniumPhrases():
-    return ["WebDriverTestContext"]
-
-
-def countOccurences(line, phrases):
+    
+def addPossibleOccurence(line, phrases):
     if containsPhrase(line, phrases()):
         return 1
     else:
@@ -103,10 +105,10 @@ def createTestReport(fileLibrary):
     data = []
     data.append(["Suite Name", "Selenium Tests", "Watin Tests", "Neutral Tests", "Ignored Tests", "Not Implemented", "Needs Investigation", "Total Tests"])
     for suite in getSuites(fileLibrary):
-        
+
         selenium = suiteTestCount(fileLibrary, suite, "selenium")
         watin = suiteTestCount(fileLibrary, suite, "watin")
-        neutral = suiteTestCount(fileLibrary, suite, "nonbrowser")
+        neutral = suiteTestCount(fileLibrary, suite, "nonbrowser")     
         ignores = countIgnoresBySuite(fileLibrary, suite)
         notImplemented = countNotImplementedBySuite(fileLibrary, suite)
         needsInvestigation = countNeedsInvestigationBySuite(fileLibrary, suite)
@@ -138,7 +140,6 @@ def splitFileIntoLines(fileName):
         print "Couldn't open " + fileName
         x = raw_input("")
     
-
 def suiteTestCount(fileLibrary, suite, testType):
     count = 0
     for file in fileLibrary:
@@ -167,7 +168,13 @@ def countNeedsInvestigationBySuite(fileLibrary, suite):
         if(file.suite == suite):
             count += file.nNeedsInvestigation
     return count
-	
+    
+def countAttributeBySuite(fileLibrary, suite, attribute):
+    count = 0
+    for file in fileLibrary:
+        if(file.suite == suite):
+            count += file.attribute
+            
 def determineSuite(filepath):
     parts = filepath.split("\\")
     for directory in parts:
