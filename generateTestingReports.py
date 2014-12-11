@@ -3,6 +3,7 @@ from fileData import *
 import re
 import os
 import csv
+import sys
 
 def processFileTree(currentDir, fileLibrary):
     # recursively move through directory finding .cs files and processing them.
@@ -80,17 +81,18 @@ print "Reading in test data...\n\n"
 
 fileLibrary = []
 
-try:
-    path = splitFileIntoLines("SET_SOURCE_PATH_HERE.txt")[0]
-    driveDirectory = splitFileIntoLines("SET_OUTPUT_PATH_HERE.txt")[0]
-except IndexError:
-    print "You didn't provide a source/destination directory!"
-    x = raw_input("Press enter")
+# <3 because the generateTestingReports.py counts as an argument
+if(len(sys.argv) < 3):
+    print "Please provide two arguments: the path of the automation project and the output path for the csv file"
+    
+else:
+    sourceDirectory = sys.argv[1]
+    outputDirectory = sys.argv[2]
 
-try:
-    fileLibrary = processFileTree(path, fileLibrary)
-    createCSVReport(fileLibrary, driveDirectory)
-    x = raw_input("Press enter")
-except:
-    print "Report was not generated..."
-    x = raw_input("Press enter")
+    try:
+        fileLibrary = processFileTree(sourceDirectory, fileLibrary)
+        createCSVReport(fileLibrary, outputDirectory)
+    except:
+        print "Bad source or output directory, report was not generated."
+
+raw_input("Press enter")
