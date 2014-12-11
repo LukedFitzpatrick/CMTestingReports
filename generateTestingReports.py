@@ -24,6 +24,7 @@ def processFileTree(currentDir, fileLibrary):
         return fileLibrary
     except:
         print "You didn't provide a good source/destination path"
+        x = raw_input("press enter")
 
 def findAttributes(fileName, directoryName):
 # look through file, identify tests, ignores, test type etc.
@@ -78,6 +79,7 @@ def createCSVReport(fileLibrary, directory):
 print "Reading in test data...\n\n"
 
 fileLibrary = []
+
 try:
     path = splitFileIntoLines("SET_SOURCE_PATH_HERE.txt")[0]
     driveDirectory = splitFileIntoLines("SET_OUTPUT_PATH_HERE.txt")[0]
@@ -85,7 +87,10 @@ except IndexError:
     print "You didn't provide a source/destination directory!"
     x = raw_input("Press enter")
 
-
-fileLibrary = processFileTree(path, fileLibrary)
-createCSVReport(fileLibrary, driveDirectory)
-x = raw_input("Press enter")
+try:
+    fileLibrary = processFileTree(path, fileLibrary)
+    createCSVReport(fileLibrary, driveDirectory)
+    x = raw_input("Press enter")
+except:
+    print "Report was not generated..."
+    x = raw_input("Press enter")
